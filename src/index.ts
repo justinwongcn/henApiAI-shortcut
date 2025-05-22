@@ -5,7 +5,7 @@ const { t } = field;
 const allowedDomains = [
   'api.deepseek.com',
   'ark.cn-beijing.volces.com',
-  'api.siliconflow.cn', 
+  'api.siliconflow.cn',
   'dashscope.aliyuncs.com',
   'api.hunyuan.cloud.tencent.com',
   'api.lkeap.cloud.tencent.com',
@@ -213,10 +213,20 @@ basekit.addField({
     const { apiKey, model, customModel, inputField, prompt, provider } = formItemParams;
     const { fetch } = context;
 
+    /** 为方便查看日志，使用此方法替代console.log */
+    function debugLog(arg: any) {
+      // @ts-ignore
+      console.log(JSON.stringify({
+        formItemParams,
+        context,
+        arg
+      }))
+    }
+
     try {
       // 修复：使用更可靠的方式处理输入字段
       let inputValue = '';
-      
+
       // 检查输入字段是否为数组并包含文本内容
       if (Array.isArray(inputField) && inputField.length > 0) {
         // 遍历所有输入项，确保捕获所有文本内容
@@ -226,13 +236,11 @@ basekit.addField({
           }
         }
       }
-      
-      console.log("处理的输入文本:", inputValue); // 添加日志以便调试
 
       if (!inputValue) {
         return {
           code: FieldCode.Success,
-          data: '',
+          data: '输入为空',
         };
       }
 
@@ -246,17 +254,19 @@ basekit.addField({
         openRouter: 'https://openrouter.ai/api/v1/chat/completions'
       };
 
+      /** 大模型名称 */
+      const name = provider?.value || 'deepseek'
       // 修改这行，移除 customUrl 相关逻辑
-      const apiUrl = apiEndpoints[provider?.value || 'deepseek'];
+      const apiUrl = apiEndpoints[name];
 
       const isReasonerModel = (customModel || model.value) === 'deepseek-reasoner';
 
       const requestBody = {
         model: customModel || model.value,
         messages: [
-          { 
-            role: 'user', 
-            content: isReasonerModel ? `${prompt}\n${inputValue}` : inputValue 
+          {
+            role: 'user',
+            content: isReasonerModel ? `${prompt}\n${inputValue}` : inputValue
           }
         ],
         stream: false,
@@ -267,7 +277,8 @@ basekit.addField({
         requestBody.messages.unshift({ role: 'system', content: prompt });
       }
 
-      console.log('Request Body:', JSON.stringify(requestBody, null, 2));
+
+      debugLog({ '===0 Request Body:': JSON.stringify(requestBody, null, 2) });
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -278,103 +289,104 @@ basekit.addField({
         body: JSON.stringify(requestBody)
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log('Error Response:', {
+      const responseText = await response.text();
+
+      // 请避免使用 debugLog(res) 这类方式输出日志，因为所查到的日志是没有顺序的，为方便排查错误，对每个log进行手动标记顺序
+      debugLog({
+        '===1 接口返回结果': {
+          responseText,
           status: response.status,
-          headers: Object.fromEntries(response.headers.entries()),
-          body: errorText
+        }
+      });
+
+
+
+      if (!response.ok) {
+        const errorText = responseText
+
+        debugLog({
+          '===2 !ok 接口返回结果': {
+            status: response.status,
+            headers: Object.fromEntries(response.headers.entries()),
+            body: errorText
+          }
         });
 
         if (response.status === 401) {
+          // 错误原因明确。直接以success形式返回错误原因
           return {
-            code: FieldCode.AuthorizationError,
-            message: t('errorAuthFailed'),
-            msg: `===捷径代码主动返回错误: API认证失败 ${response.status} ${errorText}`,
+            code: FieldCode.Success,
+            data: `${name} API认证失败，请检查字段关联账号配置。 ${response.status} ${errorText}`,
           };
         } else if (response.status === 429) {
+          // 错误原因明确。直接以success形式返回错误原因
           return {
-            code: FieldCode.RateLimit,
-            message: t('errorRateLimit'),
-            msg: `===捷径代码主动返回错误: 触发限流 ${response.status} ${errorText}`,
+            code: FieldCode.Success,
+            data: `${name} 大模型接口限流，请到你所选模型的对应平台根据平台规则进行调整。 ${response.status} ${errorText}`
           };
         }
         return {
-          code: FieldCode.Error,
-          message: t('errorApiRequest'),
-          msg: `===捷径代码主动返回错误: API请求失败 ${response.status} ${errorText}`,
+          code: FieldCode.Success,
+          data: `接口返回异常，请到你所选模型的对应平台根据平台规则进行调整：${response.status} ${errorText}`
         };
       }
 
       let data;
       try {
-        const responseText = await response.text();
-        console.log('API Response Text:', responseText);
-        
         if (!responseText) {
           return {
             code: FieldCode.Success,
             data: "AI分析内容为空，请修改提示词重试～",
-            msg: "结果异常！"
           };
         }
 
         data = JSON.parse(responseText);
       } catch (error) {
-        console.log("🚀 ~ execute: ~ response解析错误:", error);
+        debugLog({
+          '===3 解析为JSON失败': {
+            status: response.status,
+            responseText,
+          }
+        });
         return {
           code: FieldCode.Success,
-          data: "AI分析内容为空，请修改提示词重试～",
-          msg: "结果异常！"
+          data: `返回结果异常，解析为JSON时失败：${responseText}`,
         };
       }
 
       // 检查API返回的错误码
       if (data.error) {
-        console.log("🚀 ~ execute: ~ API返回错误:", data.error);
-        
-        if (data.error.code === 'rate_limit_exceeded' || data.error.type === 'rate_limit_exceeded') {
-          return {
-            code: FieldCode.RateLimit,
-            msg: "超过API调用QPS限制"
-          };
-        } else if (data.error.code === 'insufficient_quota' || data.error.type === 'insufficient_quota') {
-          return {
-            code: FieldCode.QuotaExhausted,
-            msg: "quota耗尽"
-          };
-        } else if (data.error.code === 'invalid_api_key' || data.error.type === 'invalid_api_key') {
-          return {
-            code: FieldCode.AuthorizationError,
-            msg: "服务未开通或API Key无效"
-          };
-        } else {
-          return {
-            code: FieldCode.InvalidArgument,
-            msg: "输入参数错误"
-          };
-        }
-      }
+        debugLog({
+          '===4 接口返回错误码': {
+            status: response.status,
+            responseText,
+          }
+        });
 
-      if (!data.choices?.[0]?.message?.content) {
         return {
           code: FieldCode.Success,
-          data: "AI分析内容为空，请修改提示词重试～",
-          msg: "结果异常！"
+          data: `${name} 大模型接口返回错误码 ${String(data.error)}，请到大模型平台查看错误原因`,
         };
       }
 
+
       return {
         code: FieldCode.Success,
-        data: data.choices[0].message.content.trim(),
+        // data: data.choices[0].message.content.trim(),
+        data: JSON.stringify({ data }), // 此处直接返回原始结果。需要根据具体接口/业务进行取值调整。
       };
     } catch (error) {
-      console.log("🚀 ~ execute: ~ 整体执行错误:", error);
+
+      debugLog({
+        '===999 异常错误': String(error)
+      });
+      /** 返回非 Success 的错误码，将会在单元格上显示报错，请勿返回msg、message之类的字段，它们并不会起作用。
+       * 对于未知错误，请直接返回 FieldCode.Error，然后通过查日志来排查错误原因，或者直接将错误以success返回。
+       */
       return {
         code: FieldCode.Success,
-        data: "AI服务异常，请稍后重试～",
-        msg: "服务异常！"
-      };
+        data: `异常错误：${String(error)}`
+      }
     }
   },
 });
