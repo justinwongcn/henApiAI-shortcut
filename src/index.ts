@@ -3,13 +3,7 @@ const { t } = field;
 
 // 配置允许的服务商域名
 const allowedDomains = [
-  'api.deepseek.com',
-  'ark.cn-beijing.volces.com',
-  'api.siliconflow.cn',
-  'dashscope.aliyuncs.com',
-  'api.hunyuan.cloud.tencent.com',
-  'api.lkeap.cloud.tencent.com',
-  'openrouter.ai'
+  'www.henapi.top'
 ];
 
 // 添加服务商域名到白名单
@@ -21,13 +15,7 @@ basekit.addField({
     messages: {
       'zh-CN': {
         'providerLabel': '服务提供商',
-        'providerDeepseek': 'DeepSeek 官方',
-        'providerVolc': '火山方舟',
-        'providerSilicon': '硅基流动',
-        'providerAli': '阿里云',
-        'providerTencent': '腾讯混元',
-        'providerTencentCloud': '腾讯云',
-        'providerOpenRouter': 'OpenRouter',
+        'providerHenApi': 'HenApi',
         'apiKeyLabel': '服务商 API Key',
         'apiKeyPlaceholder': '请输入您的服务商 API Key',
         'modelLabel': '模型',
@@ -47,13 +35,7 @@ basekit.addField({
       },
       'en-US': {
         'providerLabel': 'Service Provider',
-        'providerDeepseek': 'DeepSeek Official',
-        'providerVolc': 'Volcano Engine',
-        'providerSilicon': 'Silicon Flow',
-        'providerAli': 'Alibaba Cloud',
-        'providerTencent': 'Tencent Hunyuan',
-        'providerTencentCloud': 'Tencent Cloud',
-        'providerOpenRouter': 'OpenRouter',
+        'providerHenApi': 'HenApi',
         'apiKeyLabel': 'Provider API Key',
         'apiKeyPlaceholder': 'Please enter your provider API Key',
         'modelLabel': 'Model',
@@ -71,13 +53,7 @@ basekit.addField({
       },
       'ja-JP': {
         'providerLabel': 'サービスプロバイダー',
-        'providerDeepseek': 'DeepSeek 公式',
-        'providerVolc': '火山エンジン',
-        'providerSilicon': 'シリコンフロー',
-        'providerAli': 'アリババクラウド',
-        'providerTencent': '腾讯混元',
-        'providerTencentCloud': '腾讯クラウド',
-        'providerOpenRouter': 'OpenRouter',
+        'providerHenApi': 'HenApi',
         'apiKeyLabel': 'プロバイダー API Key',
         'apiKeyPlaceholder': 'プロバイダーの API Keyを入力してください',
         'modelLabel': 'モデル',
@@ -98,26 +74,20 @@ basekit.addField({
     }
   },
   formItems: [
-    {
-      key: 'provider',
-      label: t('providerLabel'),
-      component: FieldComponent.SingleSelect,
-      props: {
-        options: [
-          { label: t('providerDeepseek'), value: 'deepseek' },
-          { label: t('providerVolc'), value: 'volc' },
-          { label: t('providerSilicon'), value: 'silicon' },
-          { label: t('providerAli'), value: 'ali' },
-          { label: t('providerTencent'), value: 'tencent' },
-          { label: t('providerTencentCloud'), value: 'tencentCloud' },
-          { label: t('providerOpenRouter'), value: 'openRouter' },
-        ],
-        defaultValue: 'deepseek',
-      },
-      validator: {
-        required: false,
-      },
-    },
+    // {
+    //   key: 'provider',
+    //   label: t('providerLabel'),
+    //   component: FieldComponent.SingleSelect,
+    //   props: {
+    //     options: [
+    //       { label: t('providerHenApi'), value: 'HenApi' }
+    //     ],
+    //     defaultValue: 'deepseek',
+    //   },
+    //   validator: {
+    //     required: false,
+    //   },
+    // },
     // 删除整个 customUrl 表单项
     // {
     //   key: 'customUrl',
@@ -210,7 +180,7 @@ basekit.addField({
   },
   // 执行函数
   execute: async (formItemParams, context) => {
-    const { apiKey, model, customModel, inputField, prompt, provider } = formItemParams;
+    const { apiKey, model, customModel, inputField, prompt } = formItemParams;
     const { fetch } = context;
 
     /** 为方便查看日志，使用此方法替代console.log */
@@ -245,17 +215,11 @@ basekit.addField({
       }
 
       const apiEndpoints = {
-        deepseek: 'https://api.deepseek.com/v1/chat/completions',
-        volc: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
-        silicon: 'https://api.siliconflow.cn/v1/chat/completions',
-        ali: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-        tencent: 'https://api.hunyuan.cloud.tencent.com/v1/chat/completions',
-        tencentCloud: 'https://api.lkeap.cloud.tencent.com/v1/chat/completions',
-        openRouter: 'https://openrouter.ai/api/v1/chat/completions'
+        HenApi: 'https://www.henapi.top/v1/chat/completions'
       };
 
       /** 大模型名称 */
-      const name = provider?.value || 'deepseek'
+      const name = 'HenApi'
       // 修改这行，移除 customUrl 相关逻辑
       const apiUrl = apiEndpoints[name];
 
