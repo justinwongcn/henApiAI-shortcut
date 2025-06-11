@@ -19,8 +19,6 @@ basekit.addField({
         'apiKeyLabel': '服务商 API Key',
         'apiKeyPlaceholder': '请输入您的服务商 API Key',
         'modelLabel': '模型',
-        'modelNote': '(仅DeepSeek官方可用)',
-        'inputFieldLabel': '输入字段',
         'promptLabel': '自定义指令',
         'promptPlaceholder': '请输入指令',
         'apiKeyTip': '请参考说明文档获取 DeepSeek API：',
@@ -39,8 +37,6 @@ basekit.addField({
         'apiKeyLabel': 'Provider API Key',
         'apiKeyPlaceholder': 'Please enter your provider API Key',
         'modelLabel': 'Model',
-        'modelNote': '(DeepSeek only)',
-        'inputFieldLabel': 'Input Field',
         'promptLabel': 'Custom Prompt',
         'promptPlaceholder': 'Please enter prompt',
         'apiKeyTip': 'Please refer to the documentation to get DeepSeek API:',
@@ -57,8 +53,6 @@ basekit.addField({
         'apiKeyLabel': 'プロバイダー API Key',
         'apiKeyPlaceholder': 'プロバイダーの API Keyを入力してください',
         'modelLabel': 'モデル',
-        'modelNote': '(DeepSeek公式のみ)',
-        'inputFieldLabel': '入力フィールド',
         'promptLabel': 'カスタム指示',
         'promptPlaceholder': '指示を入力してください',
         'apiKeyTip': 'DeepSeek APIの取得については、ドキュメントを参照してください：',
@@ -74,65 +68,13 @@ basekit.addField({
     }
   },
   formItems: [
-    // {
-    //   key: 'provider',
-    //   label: t('providerLabel'),
-    //   component: FieldComponent.SingleSelect,
-    //   props: {
-    //     options: [
-    //       { label: t('providerHenApi'), value: 'HenApi' }
-    //     ],
-    //     defaultValue: 'deepseek',
-    //   },
-    //   validator: {
-    //     required: false,
-    //   },
-    // },
-    // 删除整个 customUrl 表单项
-    // {
-    //   key: 'customUrl',
-    //   label: t('customUrlLabel'),
-    //   component: FieldComponent.Input,
-    //   props: {
-    //     placeholder: t('customUrlPlaceholder'),
-    //     type: 'text',
-    //   },
-    //   validator: {
-    //     required: false,
-    //   },
-    // },
     {
       key: 'apiKey',
       label: t('apiKeyLabel'),
       component: FieldComponent.Input,
       props: {
         placeholder: t('apiKeyPlaceholder'),
-      },
-      tooltips: [
-        {
-          type: 'text',
-          content: t('apiKeyTip')
-        },
-        {
-          type: 'link',
-          text: t('apiKeyDoc'),
-          link: 'https://bytedance.larkoffice.com/docx/XvICd2i9woXlGOxp9xBcAmyNnXd'
-        }
-      ],
-      validator: {
-        required: true,
-      },
-    },
-    {
-      key: 'model',
-      label: `${t('modelLabel')} ${t('modelNote')}`,
-      component: FieldComponent.SingleSelect,
-      props: {
-        options: [
-          { label: 'deepseek-chat', value: 'deepseek-chat' },
-          { label: 'deepseek-reasoner', value: 'deepseek-reasoner' },
-        ],
-        defaultValue: 'deepseek-chat',
+        type: 'text',
       },
       validator: {
         required: true,
@@ -145,17 +87,7 @@ basekit.addField({
       props: {
         placeholder: t('modelCustomPlaceholder'),
         type: 'text',
-      },
-      validator: {
-        required: false,
-      },
-    },
-    {
-      key: 'inputField',
-      label: t('inputFieldLabel'),
-      component: FieldComponent.FieldSelect,
-      props: {
-        supportType: [FieldType.Text],
+        style: { display: 'block' }
       },
       validator: {
         required: true,
@@ -180,7 +112,7 @@ basekit.addField({
   },
   // 执行函数
   execute: async (formItemParams, context) => {
-    const { apiKey, model, customModel, inputField, prompt } = formItemParams;
+    const { apiKey, customModel, inputField, prompt } = formItemParams;
     const { fetch } = context;
 
     /** 为方便查看日志，使用此方法替代console.log */
@@ -207,13 +139,6 @@ basekit.addField({
         }
       }
 
-      if (!inputValue) {
-        return {
-          code: FieldCode.Success,
-          data: '输入为空',
-        };
-      }
-
       const apiEndpoints = {
         HenApi: 'https://www.henapi.top/v1/chat/completions'
       };
@@ -223,10 +148,10 @@ basekit.addField({
       // 修改这行，移除 customUrl 相关逻辑
       const apiUrl = apiEndpoints[name];
 
-      const isReasonerModel = (customModel || model.value) === 'deepseek-reasoner';
+      const isReasonerModel = customModel === 'deepseek-reasoner';
 
       const requestBody = {
-        model: customModel || model.value,
+        model: customModel,
         messages: [
           {
             role: 'user',
